@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Pick Drop</title>
+  
+  <meta charset="utf-8">
+  <meta content="origin" name="referrer">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://formden.com/static/cdn/bootstrap-iso.css" /> 
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDH06ZeAbgtDjbnFpTXojqTjLe-RZuCHsg&libraries=places&callback=initMap">
+  </script>
+
+ <script type="text/javascript">
+
+	 		function initMap() 
+	 		{
+		        var map = new google.maps.Map(document.getElementById('map'), {
+		          zoom: 12,
+		          center: new google.maps.LatLng(33.6778201, 73.0521689),
+		          mapTypeId: 'terrain'		           
+		        });
+		        //Auto Complete//
+		        var origin = document.getElementById('origin');
+		        var destination = document.getElementById('destination');
+		        var autocomplete = new google.maps.places.Autocomplete(origin);
+		        var autocomplete = new google.maps.places.Autocomplete(destination);
+		        autocomplete.bindTo('bounds', map);
+
+
+		        var autocompleteori = new google.maps.places.Autocomplete(origin);
+                autocompleteori.setComponentRestrictions(
+                     {'country': ['pk']});
+
+                var autocompletedes = new google.maps.places.Autocomplete(destination);
+                autocompletedes.setComponentRestrictions(
+                     {'country': ['pk']});
+		        //End of Auto Complete//
+
+		        map.data.loadGeoJson('https://raw.githubusercontent.com/RASAITech/kmllayer/master/map.geojson');
+		        map.data.setStyle(function(feature) {
+          var color = 'gray';
+            color = feature.getProperty('stroke');
+          
+          return ({
+            fillColor: color,
+            strokeColor: color,
+            strokeWeight: 3
+          });
+        });    
+          		    
+//Display of Routes
+		      
+				  function Routing(Origi,Desti){
+				  var routeways=[];
+					$.getJSON("https://raw.githubusercontent.com/RASAITech/kmllayer/master/map.geojson", function(data){
+				          var count=0;
+				      $.each(data.features, function(key,value){
+				      var routeway=[];
+				      $.each(value.geometry.coordinates, function(key,value){
+				          var m = parseFloat(value[0])
+				          var n = parseFloat(value[1])
+				          if (m>0 & m<99) {
+				          routeway.push({lat: n, lng: m })
+				        }
+				        })
+				
+				     	var flightPath = new google.maps.Polyline({
+				    	strokeColor: '#696969',
+				    	path: routeway
+				   		//map:map
+				   		});
+				     routeways.push(routeway);
+				  })
+
+
+				        $.each(data.features, function(key,value){
+				         var routeway=[];
+				         var flag1= false;
+				         var flag2= false;
+				         var strr,endr;//radius of O/D
+				         var strd=500;
+				         var endd=500;
+
+				          $.each(value.geometry.coordinates, function(key,value){
+				          var m = parseFloat(value[0])
+				          var n = parseFloat(value[1])
+				          if (m>0 & m<99) {
+				          routeway.push({lat: n, lng: m });
+				          var cord= new google.maps.LatLng(n,m);				         
+
+				          if (getDistance(Origi,cord)<500){
+				            flag1=true;
+				            
+				            if (strd>getDistance(Origi,cord)){
+				              strd=getDistance(Origi,cord);
+				              strr=routeway.length-1;
+				          }
+				        }
+				          if (getDistance(Desti,cord)<500){
+				            flag2=true;
+				            if (endd>getDistance(Desti,cord)){
+				              endd=getDistance(Desti,cord);
+				              endr=routeway.length-1; 
+				            }
+				          }
+				        }
+				        })
+				       
+				          if (flag1 && flag2){
+				            flag1= false;
+				            flag2= false;
+				            console.log("yes");
+				            console.log(strr,endr);
+				            console.log(data.features[count].properties.name)
+
+				            //Setmap2(count,'#FF0000',routeway);
+				            Setmap3(count,'#FF0000',strr,endr,routeways);
+				          }
+				          count=count+1;
+				  })
+				  })   
+				}
+				function Setmap3(count,strokeColor,strr,endr,routeways){
+					console.log(strr,endr);
+					if(strr>endr){
+						var nstrr;
+						nstrr = strr;
+						strr=endr;
+						endr=nstrr;
+					}
+					console.log(strr,endr);
+		          	flghtPath = new google.maps.Polyline({
+				    path: routeways[count].slice(strr,endr),
+				    strokeColor: strokeColor,
+				    map:map
+				  });
+		        }
+
+				  var geocoder = new google.maps.Geocoder();
+        		 //On Enter Key Press
+        		 //for Origin
+        		//var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';
+
+        		var origincoords
+
+		        document.getElementById('origin').onkeydown = function(e){
+   						if(e.keyCode == 13)
+   						{
+     					var origin = document.getElementById('origin').value;
+				        geocoder.geocode({'address': origin}, function(results, status) 
+				        {
+				          if (status === 'OK') 
+				          {
+				            map.setCenter(results[0].geometry.location);
+				            var marker = new google.maps.Marker({
+				              map: map,
+				              icon:'https://raw.githubusercontent.com/Hassamuddin/CB/master/Pick.png',
+				              position: results[0].geometry.location,
+				              suppressMarkers: true
+				            });
+				            origincoords= new google.maps.LatLng(results[0].geometry.location.lat(),results[0].geometry.location.lng());
+				            
+					      makecircle(results[0].geometry.location,map);      
+				          }  
+				        });
+						}
+				}
+				//For Detination
+				document.getElementById('destination').onkeydown = function(e){
+   						if(e.keyCode == 13)
+   						{
+     					var destination = document.getElementById('destination').value;
+				        geocoder.geocode({'address': destination}, function(results, status) 
+				        {
+				          if (status === 'OK') 
+				          {
+				            map.setCenter(results[0].geometry.location);
+				            var marker2 = new google.maps.Marker({
+				              map: map,
+				              position: results[0].geometry.location,
+				              suppressMarkers: true,
+				              icon:'https://raw.githubusercontent.com/Hassamuddin/CB/master/Drop.png'
+				            });
+				        makecircle(results[0].geometry.location,map);
+
+				       Routing(origincoords,results[0].geometry.location);
+				        
+				          } 
+				        });
+						}
+				}
+		        //End of Enter Key press
+      			}
+      			
+
+		        function Setmap2(count,strokeColor){
+		          flightPath = new google.maps.Polyline({
+				    path: routeways[count],
+				    strokeColor: strokeColor,
+				    map:map
+				  });
+		        }
+		        
+		        
+	      		
+		        function placeMarker(location, resultsMap) 
+		        {
+			         var marker = new google.maps.Marker({
+			          position: location, 
+			          map: resultsMap
+			        });
+		        }
+
+		        function makecircle(location,resultsMap){
+		        var Circle = new google.maps.Circle({
+		            strokeColor: '#0000FF',
+		            strokeOpacity: 0.8,
+		            strokeWeight: 2,
+		            fillColor: '#0000FF',
+		            fillOpacity: 0.35,
+		            map: resultsMap,
+		            center: location,
+		            radius: 1000
+		          });
+		      	}
+
+		      	var rad = function(x) {
+  					return x * Math.PI / 180;
+					};
+
+				var getDistance = function(p1, p2) 
+				{
+				  var R = 6378137; // Earth’s mean radius in meter
+				  var dLat = rad(p2.lat() - p1.lat());
+				  var dLong = rad(p2.lng() - p1.lng());
+				  var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+				    Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
+				    Math.sin(dLong / 2) * Math.sin(dLong / 2);
+				  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+				  var d = R * c;
+				  return d; // returns the distance in meter
+				};
+
+	 
+  </script>
+
+											<!-- Style.css -->
+  <style>
+		  body 
+		  {
+		      font: 20px Montserrat, sans-serif;
+		      line-height: 1.8;
+		      color: #f5f6f7;
+		  }
+		  p {font-size: 16px;}
+		   #map {
+		        height: 100px;
+		      }
+		   .bootstrap-iso .formden_header h2, .bootstrap-iso .formden_header p, .bootstrap-iso form{font-family: Arial, Helvetica, sans-serif; color: black;}.bootstrap-iso form button, .bootstrap-iso form button:hover{color: white !important;} .asteriskField{color: red;}
+		   .center_div{
+		    margin: 0 auto;
+		    width:80% /* value of your choice which suits your alignment */
+		}
+
+		  .margin {margin-bottom: 45px;}
+		  .bg-1 { 
+		      background-color: #1abc9c; /* Green */
+		      color: #ffffff;
+		  }
+		  .bg-2 { 
+		      background-color: #474e5d; /* Dark Blue */
+		      color: #ffffff;
+		  }
+		  .bg-3 { 
+		      background-color: #faf8fba3; /* White */
+		      color: #555555;
+		  }
+		  .bg-4 { 
+		      background-color: #2f2f2f; /* Black Gray */
+		      color: #fff;
+		  }
+		  .bg-5 { 
+		      background-color: #e5d8e6; /* Blue */
+		      color: #808080;
+		  }
+		  .bg-6 { 
+		      color: #2f2f2f
+		  }
+		  
+		  .control-label{
+		  	color: #ffffff;
+		  	font-size: 15px;
+		  }
+		  .container-fluid {
+		      padding-top: 30px;
+		      padding-bottom: 30px;
+		  }
+		  .container-main-map-div
+		  {
+		  	padding: 16px;
+		  }
+		  .navbar {
+		      padding-top: 5px;
+		      padding-bottom: 5px;
+		      border: 0;
+		      border-radius: 0;
+		      margin-bottom: 0;
+		      font-size: 12px;
+		      letter-spacing: 5px;
+		  }
+		  .navbar-nav  li a:hover {
+		      color: #1abc9c !important;
+		  }
+		  .sticky {
+		  position: fixed;
+		  top: 0;
+		  width: 100%;
+		}
+
+		.sticky + .container-main-map-div {
+		  padding-top: 102px;
+		}
+		 #wrapper { position: relative; }
+   		 #over_map { position: absolute; right: 40px; bottom: 10px; z-index: 99; }
+</style>
+
+
+</head>
+
+<body>
+<!-- Navbar -->
+	<nav class="navbar navbar-default" id="myHeader" style="background-color: #e5d8e6">
+	  <div class="container">
+	    <div class="navbar-header">
+	    	
+	      <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+	        <span class="icon-bar"></span>
+	        <span class="icon-bar"></span>
+	        <span class="icon-bar"></span>                     
+	      </button>
+	      <a class="navbar-brand" href="index.html" style="color:#4B0082; font-weight: bold; padding-top: 12px; padding-bottom: 12px; padding-right: 12px;padding-left: 12px; font-size: 30px">PickDrop</a>
+
+	      	    <h1 align="center" style="color: black; float: right; margin-left: 157px; font-size: 27px"><b></b>
+	    	    <b></b></h1>
+	    </div>
+	    <div class="collapse navbar-collapse" id="myNavbar"  style="margin-top: 13px">
+	      <ul class="nav navbar-nav navbar-right" style="margin-right: -52px">
+	        <li><a href="index.html">Home</a></li>
+	        <li><a href="about.html">About us</a></li>
+	        <li><a href="contactus.html">Contact us</a></li>
+	        <li><a href="driverRegistration.html">Be a Driver</a></li>
+	      </ul>
+	    </div>
+	  </div>
+	</nav>
+
+
+<!-- Third Container (Grid) -->
+<div class="container-fluid bg-3 text-center"> 
+    <div class="col-sm-3">
+      <form class="form-horizontal" method="post", action="query.php">
+				  <div class="form-group">
+				    <div class="col-sm-12">
+				      <input type="text" class="form-control" id="origin" placeholder="Enter origin" name="origin" required>
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				    <div class="col-sm-12"> 
+				      <input type="text" class="form-control" id="destination" placeholder="Enter destination" name="destination" required>
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				    <div class="col-sm-12"> 
+				      <input class="form-control" id="name" name="name" type="text" placeholder="Enter name" required/>
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				    <div class="col-sm-12"> 
+				      <input class="form-control" id="tel" name="tel" placeholder="+92xxx-xxxxxxx" type="text" required/>
+				    </div>
+				  </div>
+
+
+				  <div class="form-group">
+				    <div class="col-sm-12"> 
+				    	<input class="form-control" id="duration" name="months" placeholder="Duration in Months" type="Months" required />
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				  	<div class="col-sm-12"> 
+				      <select class="form-control" id="categories" name="category"> 
+				      	<option value=" " selected>Select Categories</option>
+				        <option>Standard</option>
+				        <option>Ladies only</option>
+				        <option>Childrens</option>
+	      			  </select>
+	      			</div>
+ 	              </div>
+
+				  <div class="form-group">
+				  	<label class="control-label requiredField" for="pickuptime" style="color: #2f2f2f">
+      								 PickUp Time
+      					 <span class="asteriskField">
+       					 *
+      					 </span>
+     					 </label>
+				    <div class="col-sm-12"> 
+				      <input class="form-control" id="pickuptime" name="pickuptime" type="Time" placeholder="Enter pickuptime" required/>
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				  	<label class="control-label requiredField" for="returntime" style="color: #2f2f2f">
+      								 Return Time
+      					 <span class="asteriskField">
+       					 *
+      					 </span>
+     					 </label>
+				    <div class="col-sm-12"> 
+				    	<input class="form-control" id="returntime" name="returntime" type="Time" placeholder="Enter Return Time" required/>
+				    </div>
+				  </div>
+
+				  <div class="form-group">
+				  	<label class="control-label requiredField" for="date" style="color: #2f2f2f"> Start Date
+      								 
+      					 <span class="asteriskField">
+       					 *
+      					 </span>
+     					 </label>
+				    <div class="col-sm-12"> 
+				    	<input class="form-control" id="date" name="date" placeholder="MM/DD/YYYY" type="Date" placeholder="Enter Start date" required/>
+				    </div>
+				  </div>
+
+
+ 	              <div class="form-group"> 
+				    <div class="col-sm-12">
+				    	<!-- <button type="button" class="btn btn-default" id="submit" value="Geocode">Submit</button> -->
+				    	<button type="submit" class="btn btn-default" id="submit" value="Geocode">Submit</button>
+				    </div>
+				  </div>
+    		</form>
+    </div>
+
+    <div class="col-sm-9">
+			<div id="wrapper">
+				   <div class="container-fluid bg-1" id="map" style="height: 650px;"></div>
+
+				   <div id="over_map">
+				   		    <div class="container" style=" height: 107px; width: 100%; background-color: #ffffff ">
+										<div id="buttons" style="color: black; font-size: 10px; text-align: left; font-weight: bold;">
+										  <input type="checkbox" name="filter" value="Acshuttle" class='chk-btn' onclick="Acshuttle();">
+										  <label for='shower'>Premium AC Shuttles</label>
+										  </br>
+										  <input type="checkbox" name="filter" value="suzukibolan" class='chk-btn' onclick="suzukibolan();">
+										  <label for='flush'>Suzuki Bolan</label>
+										  </br>
+										  <input type="checkbox" name="filter" value="privatecars" class='chk-btn' onclick="privatecars();">
+										  <label for='vault'>Private cars</label>
+										  </br>
+										  <input type="checkbox" name="filter" value="taxi" class='chk-btn' 
+										  onclick="taxi();">
+										  <label for='vault'>Taxi's</label>
+										</div>
+							</div>
+				   </div>
+			</div>
+    </div>
+
+</div>
+
+
+<!-- Footer -->
+<footer class="container-fluid bg-5 text-center" >
+  <p>Powered by: <a href="http://rasai.pk/About/"><span style="color: #170C79">RASAI</span></a></p>
+  <p>For further info contact:- feedback@pickdrop.pk</p>
+  <p>Email:- hr@rasai.pk</p>
+</footer>
+
+</body>
+</html>
